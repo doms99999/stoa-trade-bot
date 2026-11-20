@@ -164,13 +164,23 @@ def _mcp_call(tool, arguments, timeout=60):
 
 
 def safety_check(token_address, chain=CHAIN):
-    """Stoa safety check: simulated buy + sell-back, taxes, holder concentration."""
-    return _mcp_call("safety_check", {"chain": chain, "token": token_address})
+    """Stoa safety check: simulated buy + sell-back, taxes, holder concentration.
+
+    Uses Stoa's REST endpoint (fast); falls back to the MCP safety_check tool.
+    """
+    try:
+        return _get_json(f"{API_BASE.replace('/v1', '')}/safety/{chain}/{token_address}")
+    except StoaError:
+        return _mcp_call("safety_check", {"chain": chain, "token": token_address})
 
 
 def trade_url(buy_token_address, referrer=None, chain=CHAIN):
-    """Deep link into Stoa Trade with the buy token and referrer prefilled."""
+    """Deep link into Stoa Trade, pair prefilled, referrer named via ?ref=.
+
+    This is the link format Stoa credits: swaps opened from it name the
+    referrer address on-chain (see docs/referrals).
+    """
     url = f"https://stoadex.com/trade?chain={chain}&sell=native&buy={buy_token_address}"
     if referrer:
-        url += f"&referrer={referrer}"
+        url += f"&ref={referrer}"
     return url
